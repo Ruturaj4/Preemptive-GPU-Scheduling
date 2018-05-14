@@ -8,6 +8,6 @@ for Preemptive Priority Scheduling </b>
   
 School of Software, Sungkyunkwan University
 Seobu 2066, Suwon-si, Gyeonggi-do 23185, Rep. of Korea
-Email: {hyeonsu.lee, jaehun}@csl.skku.edu, euiseong@skku.edu
+Email: {hyeonsu.lee, jaehun}@csl.skku.edu, euiseong@skku.edu}
 
 </body>
