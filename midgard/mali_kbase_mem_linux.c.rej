@@ -1,0 +1,60 @@
+--- drivers/gpu/arm/midgard/mali_kbase_mem_linux.c	2018-02-21 16:00:25.640619385 +0900
++++ drivers/gpu/arm/midgard/mali_kbase_mem_linux.c	2018-02-21 15:57:49.500649793 +0900
+@@ -159,11 +165,53 @@ struct kbase_va_region *kbase_mem_alloc(
+ 		*gpu_va = reg->start_pfn << PAGE_SHIFT;
+ 	}
+ 
+-	kbase_gpu_vm_unlock(kctx);
+-	if((reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_CUSTOM_VA){
+-		kctx->mem_count += (int)va_pages;
+-		//printk(KERN_ALERT"ALLOC[%llu] => MEM[%d]\n", va_pages, reg->kctx->mem_count);
++#ifdef _TSK_CUSTOM_SNAP_
++
++	if(kctx->jctx.sched_info.runpool.policy_ctx.cfs.gpgpu_priority > SCHED_RT_PRIORITY){
++		//spin_lock_irqsave(&kctx->snap_lock, mem_flag);
++
++#ifdef _TSK_CUSTOM_TRACE_
++		context_trace_init_reg(kctx, reg);
++#endif
++		s =  kbase_reg_current_backed_size(reg);
++		if (((reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_SAME_VA && s==1) ||
++			((reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_EXEC && s==1) ||
++			(reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_CUSTOM_VA){
++
++			dreg = &reg->dreg;
++			dreg->kctx = reg->alloc->imported.kctx;
++			dreg->reg = reg;
++			dreg->nr_pages = reg->alloc->nents;
++			dreg->sp = kmalloc(sizeof(struct page*) * dreg->nr_pages, GFP_KERNEL);
++			dreg->dp = kmalloc(sizeof(struct page*) * dreg->nr_pages, GFP_KERNEL);
++
++			for(i=0;i<dreg->nr_pages;i++){
++				dreg->sp[i] = pfn_to_page(PFN_DOWN(reg->alloc->pages[i]));
++				dreg->dp[i] = alloc_page(GFP_HIGHUSER);
++			/*mp = kmap(dreg->dp[i]);
++			memset(mp, 0x00, 1);
++			kbase_sync_to_memory(PFN_PHYS(page_to_pfn(dreg->dp[i])), mp, 1);
++			kunmap(dreg->dp[i]);
++			*/
++			}
++			
++			dreg->ksp = vmap(dreg->sp, dreg->nr_pages, VM_MAP, PAGE_KERNEL);
++			if(dreg->ksp==NULL)
++				printk(KERN_ALERT"ksp null : %zu\n",dreg->nr_pages);
++			dreg->kdp = vmap(dreg->dp, dreg->nr_pages, VM_MAP, PAGE_KERNEL);
++			if(dreg->kdp==NULL)
++				printk(KERN_ALERT"kdp null : %zu\n",dreg->nr_pages);
++	                
++
++			//printk(KERN_ALERT"<gpu> region alloc : %u\n",reg->reg_id);
++		}
++#ifdef _TSK_CUSTOM_TRACE_
++		context_trace_alloc_done_reg(kctx, reg);
++#endif
++		//spin_unlock_irqrestore(&kctx->snap_lock, mem_flag);
+ 	}
++#endif
++	kbase_gpu_vm_unlock(kctx);
+ 	return reg;
+ 
+ no_mmap:

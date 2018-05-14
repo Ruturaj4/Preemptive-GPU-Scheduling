@@ -1,0 +1,87 @@
+--- drivers/gpu/arm/midgard/mali_kbase_jm.c	2018-02-21 16:00:25.639619391 +0900
++++ drivers/gpu/arm/midgard/mali_kbase_jm.c	2018-02-21 15:57:49.498649807 +0900
+@@ -134,20 +138,17 @@ static void kbase_job_hw_submit(kbase_de
+ 	kbase_trace_mali_job_slots_event(GATOR_MAKE_EVENT(GATOR_JOB_SLOT_START, js), kctx, kbase_jd_atom_id(kctx, katom)); 
+ #endif				/* CONFIG_MALI_GATOR_SUPPORT */
+ #ifdef CONFIG_GPU_TRACEPOINTS
+-	if (kbasep_jm_nr_jobs_submitted(&kbdev->jm_slots[js]) == 1)
+-	{
++	//if (kbasep_jm_nr_jobs_submitted(&kbdev->jm_slots[js]) == 1)
++	//{
+ 		/* If this is the only job on the slot, trace it as starting */
+-		char js_string[16];
++		//char js_string[16];
+ 		//trace_gpu_sched_switch(kbasep_make_job_slot_string(js, js_string), ktime_to_ns(katom->start_timestamp), (u32)katom->kctx, 0, katom->work_id);
+-		kbdev->jm_slots[js].last_context = katom->kctx;
+-	}
++	//	kbdev->jm_slots[js].last_context = katom->kctx;
++	//}
+ #endif
+ 	kbase_timeline_job_slot_submit(kbdev, kctx, katom, js);
+ 
+ 	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), JSn_COMMAND_START, katom->kctx);
+-	katom->kctx->kernel_count++;
+-	kbdev->kernel_start = ktime_get();
+-	//printk(KERN_ALERT"submit kernel\n");
+ }
+ 
+ void kbase_job_submit_nolock(kbase_device *kbdev, kbase_jd_atom *katom, int js)
+@@ -311,18 +394,26 @@ void kbase_job_done_slot(kbase_device *k
+ 	 * - Schedule out the parent context if necessary, and schedule a new one in.
+ 	 */
+ #ifdef CONFIG_GPU_TRACEPOINTS
++	/*
+ 	if (kbasep_jm_nr_jobs_submitted(slot) != 0) {
+ 		kbase_jd_atom *katom;
+ 		char js_string[16];
+-		katom = kbasep_jm_peek_idx_submit_slot(slot, 0);        /* The atom in the HEAD */
+-		//trace_gpu_sched_switch(kbasep_make_job_slot_string(s, js_string), ktime_to_ns(*end_timestamp), (u32)katom->kctx, 0, katom->work_id);
++		katom = kbasep_jm_peek_idx_submit_slot(slot, 0);        // The atom in the HEAD 
++		trace_gpu_sched_switch(kbasep_make_job_slot_string(s, js_string), ktime_to_ns(*end_timestamp), (u32)katom->kctx, 0, katom->work_id);
+ 		slot->last_context = katom->kctx;
+ 	} else {
+ 		char js_string[16];
+-		//trace_gpu_sched_switch(kbasep_make_job_slot_string(s, js_string), ktime_to_ns(ktime_get()), 0, 0, 0);
++		trace_gpu_sched_switch(kbasep_make_job_slot_string(s, js_string), ktime_to_ns(ktime_get()), 0, 0, 0);
+ 		slot->last_context = 0;
+-	}
++	}*/
+ #endif
++
++#ifdef CONFIG_GPU_TRACEPOINTS
++/*	if(katom->sched_stat & SCHED_STAT_DONE){
++		katom->end = ktime_get();
++		trace_gpu_custom("Job Done", ktime_to_ns(ktime_sub(katom->end, katom->start)), kctx->ctx_id, katom->atom_id, (u32)katom->kctx->nr_dep_job, (u32)katom->sched_stat);
++	}*/
++#endif  
+ 	kbase_jd_done(katom, s, end_timestamp, KBASE_JS_ATOM_DONE_START_NEW_ATOMS);
+ }
+ 
+@@ -479,20 +584,22 @@ void kbase_job_done(kbase_device *kbdev,
+ 			}
+ 
+ 			KBASE_LOG(2, kbdev->dev, "Job ended with status 0x%08X\n", completion_code);
+-
++			
++#ifdef _TSK_CUSTOM_SCHED_
++			nr_done = sc_active_jobs(slot);
++#else
+ 			nr_done = kbasep_jm_nr_jobs_submitted(slot);
+ 			nr_done -= (active >> i) & 1;
+ 			nr_done -= (active >> (i + 16)) & 1;
+-
++#endif
+ 			if (nr_done <= 0) {
+ 				dev_warn(kbdev->dev, "Spurious interrupt on slot %d", i);
+ 				goto spurious;
+ 			}
+ 
+ 			count += nr_done;
+-			kbdev->kernel_end = ktime_get();
+-			//printk(KERN_ALERT"[GPU] Kernel Runtime[%d] : %llu : %d - %u\n", count, ktime_to_us(kbdev->kernel_end) - ktime_to_us(kbdev->kernel_start)
+-					//, nr_done, active);
++
++
+ 
+ 			while (nr_done) {
+ 				if (nr_done == 1) {

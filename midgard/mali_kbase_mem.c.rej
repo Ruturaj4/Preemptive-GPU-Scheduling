@@ -1,0 +1,51 @@
+--- drivers/gpu/arm/midgard/mali_kbase_mem.c	2018-02-21 16:00:25.640619385 +0900
++++ drivers/gpu/arm/midgard/mali_kbase_mem.c	2018-02-21 15:57:49.499649800 +0900
+@@ -625,12 +625,45 @@ KBASE_EXPORT_TEST_API(kbase_alloc_free_r
+  */
+ void kbase_free_alloced_region(struct kbase_va_region *reg)
+ {
++#ifdef _TSK_CUSTOM_SNAP_
++	int i=0, s;
++	struct custom_dump_region *dreg;
++#endif
+ 	KBASE_DEBUG_ASSERT(NULL != reg);
++#ifdef _TSK_CUSTOM_SNAP_
+ 
+-	//measure
+-	//reg->kctx->mem_count -= (int)reg->nr_pages;
+-	//printk(KERN_ALERT"FREE[%zu] => MEM[%d]\n", reg->nr_pages, reg->kctx->mem_count);
++	//printk(KERN_ALERT"<gpu> del reg : %u\n", reg->reg_id);
++	if(reg->kctx->jctx.sched_info.runpool.policy_ctx.cfs.gpgpu_priority > SCHED_RT_PRIORITY){
++	//spin_lock_irqsave(&reg->kctx->snap_lock, mem_flag);
++	s = kbase_reg_current_backed_size(reg);
++	if (((reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_SAME_VA && s==1) ||
++		((reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_EXEC && s==1) ||
++		(reg->flags & KBASE_REG_ZONE_MASK) == KBASE_REG_ZONE_CUSTOM_VA){
++
++		dreg = &reg->dreg;
++		
++		vunmap(dreg->ksp);
++
++		if(!dreg->is_vmalloc){
++			vunmap(dreg->kdp);
++		
++			for(i=0;i<dreg->nr_pages;i++){
++				__free_page(dreg->dp[i]);
++			}
++		}else{
++			vfree(dreg->kdp);
++		}
++		kfree(dreg->sp);
++		kfree(dreg->dp);
++	}
++
++	//spin_unlock_irqrestore(&reg->kctx->snap_lock, mem_flag);
++	}
++#endif
+ 	if (!(reg->flags & KBASE_REG_FREE)) {
++#ifdef _TSK_CUSTOM_TRACE_
++		context_trace_release_reg(reg->kctx, reg->alloc->nents);
++#endif
+ 		kbase_mem_phy_alloc_put(reg->alloc);
+ 		KBASE_DEBUG_CODE(
+ 					/* To detect use-after-free in debug builds */

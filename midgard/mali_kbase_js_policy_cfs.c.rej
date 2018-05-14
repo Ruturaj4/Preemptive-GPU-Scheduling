@@ -1,0 +1,57 @@
+--- drivers/gpu/arm/midgard/mali_kbase_js_policy_cfs.c	2018-02-21 16:00:25.640619385 +0900
++++ drivers/gpu/arm/midgard/mali_kbase_js_policy_cfs.c	2018-02-21 15:57:49.499649800 +0900
+@@ -774,7 +819,6 @@ static enum hrtimer_restart timer_callba
+ 
+ 				/* Job is Soft-Stoppable */
+ 				if (ticks == soft_stop_ticks) {
+-					printk(KERN_ALERT"soft_stop_ticks\n");
+ 					/* Job has been scheduled for at least js_devdata->soft_stop_ticks ticks.
+ 					 * Soft stop the slot so we can run other jobs.
+ 					 */
+@@ -783,21 +827,26 @@ static enum hrtimer_restart timer_callba
+ #if KBASE_DISABLE_SCHEDULING_SOFT_STOPS == 0
+ 					kbase_job_slot_softstop(kbdev, s, atom);
+ #endif
++#ifdef _TSK_CUSTOM_SCHED_
++				} else if (0) {
++#else
+ 				} else if (ticks == hard_stop_ticks) {
+-					printk(KERN_ALERT"hard_stop_ticks\n");
++#endif
+ 					/* Job has been scheduled for at least js_devdata->hard_stop_ticks_ss ticks.
+ 					 * It should have been soft-stopped by now. Hard stop the slot.
+ 					 */
+ #if KBASE_DISABLE_SCHEDULING_HARD_STOPS == 0
+ 					dev_warn(kbdev->dev, "JS: Job Hard-Stopped (took more than %lu ticks at %lu ms/tick)", (unsigned long)ticks, (unsigned long)(js_devdata->scheduling_tick_ns / 1000000u));
++					printk(KERN_ALERT"time out - hardstop 1\n");
+ 					kbase_job_slot_hardstop(atom->kctx, s, atom);
+ #endif
+ 				} else if (ticks == gpu_reset_ticks) {
+-					printk(KERN_ALERT"gpu_reset_ticks\n");
+ 					/* Job has been scheduled for at least js_devdata->gpu_reset_ticks_ss ticks.
+ 					 * It should have left the GPU by now. Signal that the GPU needs to be reset.
+ 					 */
++#ifndef _TSK_CUSTOM_SCHED_
+ 					reset_needed = MALI_TRUE;
++#endif
+ 				}
+ #else 				/* !CINSTR_DUMPING_ENABLED */
+ 				/* NOTE: During CINSTR_DUMPING_ENABLED, we use the alternate timeouts, which
+@@ -809,16 +858,15 @@ static enum hrtimer_restart timer_callba
+ 					 */
+ 					KBASE_LOG(1, kbdev->dev, "Soft-stop");
+ 				} else if (ticks == js_devdata->hard_stop_ticks_nss) {
+-					printk(KERN_ALERT"hard_stop_2_ticks\n");
+ 					/* Job has been scheduled for at least js_devdata->hard_stop_ticks_nss ticks.
+ 					 * Hard stop the slot.
+ 					 */
+ #if KBASE_DISABLE_SCHEDULING_HARD_STOPS == 0
+ 					dev_warn(kbdev->dev, "JS: Job Hard-Stopped (took more than %lu ticks at %lu ms/tick)", (unsigned long)ticks, (unsigned long)(js_devdata->scheduling_tick_ns / 1000000u));
++					printk(KERN_ALERT"time out - hardstop 2\n");
+ 					kbase_job_slot_hardstop(atom->kctx, s, atom);
+ #endif
+ 				} else if (ticks == js_devdata->gpu_reset_ticks_nss) {
+-					printk(KERN_ALERT"gpu_reset_2_ticks\n");
+ 					/* Job has been scheduled for at least js_devdata->gpu_reset_ticks_nss ticks.
+ 					 * It should have left the GPU by now. Signal that the GPU needs to be reset.
+ 					 */

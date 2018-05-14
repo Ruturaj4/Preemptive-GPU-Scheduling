@@ -1,0 +1,54 @@
+--- drivers/gpu/arm/midgard/mali_kbase_defs.h	2018-02-21 16:00:25.638619398 +0900
++++ drivers/gpu/arm/midgard/mali_kbase_defs.h	2018-02-21 15:57:49.497649813 +0900
+@@ -803,7 +839,25 @@ struct kbase_device {
+ 	 */
+ 	mali_bool force_replay_random;
+ #endif
+-    ktime_t kernel_start, kernel_end;
++
++#ifdef _TSK_CUSTOM_TRACE_
++    device_trace tInfo;
++#endif
++#ifdef _TSK_CUSTOM_SNAP_
++    struct snapshot_kthreads snapshot_ctx;
++    u32 snap_granularity;
++#endif
++#ifdef _TSK_CUSTOM_PROC_
++    struct list_head proc_ctx_list;
++#endif
++#ifdef _TSK_CUSTOM_SCHED_
++    u8 run_evict;
++#endif
++#ifdef _TSK_TRACE_EVICTION_
++    u8 sw_trace;
++    //for running job eviction
++    ktime_t eviction_time;
++#endif
+ };
+ 
+ struct kbase_context {
+@@ -871,11 +925,20 @@ struct kbase_context {
+ #ifdef CONFIG_MALI_TRACE_TIMELINE
+ 	kbase_trace_kctx_timeline timeline;
+ #endif
+-    //measure
+-    ktime_t app_start, app_end;
+-    int mem_count;
+-    int kernel_count;
+ 
++#ifdef _TSK_CUSTOM_SCHED_
++    atomic_t process_preempt;
++    int nr_dep_job;
++#endif
++#ifdef _TSK_CUSTOM_SNAP_
++    spinlock_t snap_lock;
++#endif 
++#ifdef _TSK_CUSTOM_PROC_                
++    struct list_head proc_ctx_list_node;
++#endif
++#ifdef _TSK_CUSTOM_TRACE_
++    context_trace tInfo;
++#endif
+ };
+ 
+ typedef enum kbase_reg_access_type {
