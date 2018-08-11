@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <h1>Preemptive GPU Scheduling - patched source code ⭐️</h1>
+    <h1>Preemptive GPU Scheduling - patched source code 💯</h1>
     <p>This is re-implementation of an original paper - <b> A GPU Kernel Transactionization Scheme
     for Preemptive Priority Scheduling<a href = "https://github.com/Hyunsu-Lee/psched_gpu">[1]</a></b></p>
     <p>Project Team members (University of Kansas🔶🔷)-<br><b><a href = "https://github.com/Ruturaj4">Ruturaj Vaidya</a> and Dhwani Pandya</b>.</p>
